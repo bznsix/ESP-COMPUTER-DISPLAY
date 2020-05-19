@@ -23,6 +23,6 @@
 
 ## PS
 
-如果你对这个项目更加感兴趣欢迎前去数码之家观看我的帖子了解详细教程。[ https://www.mydigit.cn/forum.php?mod=viewthread&tid=126778&extra= ](直达链接)
+如果你对这个项目更加感兴趣欢迎前去数码之家观看我的帖子了解详细教程。[ 直达链接 ](https://www.mydigit.cn/forum.php?mod=viewthread&tid=126778&extra=)
 
 欢迎follow，转载请注明原作者。
