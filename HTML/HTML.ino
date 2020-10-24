@@ -1,3 +1,8 @@
+/*****************************
+ * 设计：彭昕
+ * 所用字体：u8g2_font_freedoomr10_mu
+ * ***************************/
+
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
 #include <ArduinoJson.h>
@@ -16,53 +21,52 @@
 #include <Wire.h>
 #endif
 
-U8G2_SSD1306_128X64_NONAME_F_SW_I2C u8g2(U8G2_R0, /* clock=*/ SCL, /* data=*/ SDA, /* reset=*/ U8X8_PIN_NONE);   // All Boards without Reset of the Display
+U8G2_SSD1306_128X64_NONAME_F_SW_I2C u8g2(U8G2_R0, /* clock=*/ D4, /* data=*/ D3, /* reset=*/ U8X8_PIN_NONE);   // All Boards without Reset of the Display
 //U8G2 初始化头文件//
 // wifi 参数
 const char* ssid = "ASUS";
 const char* password = "887385206";
-const char* host = "192.168.12.153"; //需要访问的域名
+const char* host = "192.168.2.167"; //需要访问的域名
 const int httpsPort = 8080;  // 需要访问的端口
 const String url = "/sse";   // 需要访问的地址
 HTTPClient http;
 WiFiClient client;
-
-  int CPU_FREQ;
-  int GPU_FREQ;
-  int CPU_TEMP;
-  int GPU_TEMP;
-  int CPU_FAN;
-  int GPU_FAN;
-  int CASE_FAN;
-  int GPU_USE;
-  int CPU_USE;   
+//全局变量保存解析的数据
+int CPU_FREQ;
+int GPU_FREQ;
+int CPU_TEMP;
+int GPU_TEMP;
+int CPU_FAN;
+int GPU_FAN;
+int CASE_FAN;
+int GPU_USE;
+int CPU_USE;   
+int value = 0;
 
 void setup() {
 // 启动串口
-Serial.begin(500000);
-Serial.println();
-Serial.println();
-Serial.print("Connecting to ");
-Serial.println(ssid);
-WiFi.begin(ssid, password);
- u8g2.begin();
-  u8g2_prepare();
-  u8g2.drawXBMP(32, 0, 64,64, manlogo);
-  u8g2.sendBuffer();
-  delay(500);
-while (WiFi.status() != WL_CONNECTED) //连接WiFi
-{
-delay(500);
-Serial.print(".");
+  Serial.begin(500000);
+  Serial.println();
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+  WiFi.begin(ssid, password);
+  u8g2_init();
+  delay(2000);
+  while (WiFi.status() != WL_CONNECTED) //连接WiFi
+  {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.println("WiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());//打印出开发板的IP地址
 }
-Serial.println("");
-Serial.println("WiFi connected");
-Serial.println("IP address: ");
-Serial.println(WiFi.localIP());//打印出开发板的IP地址
-}
-int value = 0;
+
 void loop() {
   sendrequest();
+  draw_GPU();
   draw_CPU();
 }
 
@@ -129,23 +133,22 @@ void getPrice(String s) {
   datstr = s.substring(datStart, datEnd);
   GPU_USE = datstr.toInt();
   
-//  //Serial.println(s);
-//  Serial.print("CPU_FREQ");
-//  Serial.println(dat.CPU_FREQ);
-//  Serial.print("GPU_FREQ");
-//  Serial.println(dat.GPU_FREQ);
-//  Serial.print("CPU_TEMP");
-//  Serial.println(dat.CPU_TEMP);
-//  Serial.print("GPU_TEMP");
-//  Serial.println(dat.GPU_TEMP);
-//  Serial.print("CPU_FAN");
-//  Serial.println(dat.CPU_FAN);
-//  Serial.print("GPU_FAN");
-//  Serial.println(dat.GPU_FAN);
-//  Serial.print("CASE_FAN");
-//  Serial.println(dat.CASE_FAN);
-//  
-//  Serial.println();
+  //Serial.println(s);
+  Serial.print("CPU_FREQ");
+  Serial.println(CPU_FREQ);
+  Serial.print("GPU_FREQ");
+  Serial.println(GPU_FREQ);
+  Serial.print("CPU_TEMP");
+  Serial.println(CPU_TEMP);
+  Serial.print("GPU_TEMP");
+  Serial.println(GPU_TEMP);
+  Serial.print("CPU_FAN");
+  Serial.println(CPU_FAN);
+  Serial.print("GPU_FAN");
+  Serial.println(GPU_FAN);
+  Serial.print("CASE_FAN");
+  Serial.println(CASE_FAN);
+  
 }
 
 void sendrequest()
@@ -159,7 +162,7 @@ void sendrequest()
      Serial.println("connection failed");  
     return;  
    }  
-   delay(10);   
+  delay(10);   
   String postRequest =(String)("GET ") + url + " HTTP/1.1\r\n" +  
     "Content-Type: text/html;charset=utf-8\r\n" +  
      "Host: " + host + "\r\n" + 
@@ -170,19 +173,19 @@ void sendrequest()
    /**
     * 展示返回的所有信息
    */
-
-char buffer[420];
-int numdata = 0;
-delay(100);
-numdata = client.readBytes(buffer,421);
-String temp = String(buffer);
-Serial.println(temp);
-getPrice(temp);
-delay(500);
+  char buffer[420];
+  int numdata = 0;
+  delay(100);
+  numdata = client.readBytes(buffer,421);
+  String temp = String(buffer);
+  Serial.println(temp);//打印返回的信息
+  getPrice(temp);//
+  delay(500);
 }
+
 void u8g2_prepare(void) 
 {
-  u8g2.setFont(u8g2_font_6x10_tf);
+  u8g2.setFont(u8g2_font_freedoomr10_mu);
   u8g2.setFontRefHeightExtendedText();
   u8g2.setDrawColor(1);
   u8g2.setFontPosTop();
@@ -193,50 +196,67 @@ void draw_GPU(void)
 {
   u8g2_prepare();
   u8g2.clearBuffer();
-  u8g2.drawXBMP(0, 0,gpulogow,gpulogoh, gpulogo);
-  u8g2.drawXBMP(58, 0,temlogow,temlogoh, temlogo);
-  u8g2.drawXBMP(58, 23,freqlogow,freqlogoh, freqlogo);
-  u8g2.drawXBMP(0, 43,uselogow,uselogoh, uselogo);
-  u8g2.drawXBMP(58, 43,fan1logow,fan11ogoh, fan1logo);  
-  u8g2.setFont(u8g2_font_ncenB14_tr);
-  u8g2.setCursor(75, 0);
-  u8g2.print(GPU_TEMP); 
-//  u8g2.setFont(u8g2_font_unifont_t_symbols);
-//  u8g2.setFontPosTop();
-//  u8g2.drawUTF8(100, 0, "℃");
-  u8g2.drawStr(100,0, "℃");
-  u8g2.setCursor(75, 22);
-  u8g2.print(GPU_FREQ);
-  u8g2.setCursor(21,45);
-  u8g2.drawStr(42,45, "%");
-  u8g2.print(GPU_USE);
-  u8g2.setCursor(75, 44);
+  u8g2.setFont(u8g2_font_freedoomr10_mu);
+  u8g2.setCursor(14, 0);
+  u8g2.print("GPU"); 
+  u8g2.setCursor(0, 16);
+  u8g2.print("TEM:");
+  u8g2.print(GPU_TEMP);
+  u8g2.print("C");
+  u8g2.setCursor(0, 28);
+  u8g2.print("FAN:");
   u8g2.print(GPU_FAN);
-  u8g2.sendBuffer();
+  u8g2.setCursor(0, 40);
+  u8g2.print("FRE:");
+  u8g2.print(GPU_FREQ);
+  u8g2.setCursor(0, 52);
+  u8g2.print("USE:");
+  u8g2.print(GPU_USE);
+  u8g2.print("%");
+//  u8g2.drawLine(64, 0, 64, 64); 
+  // u8g2.drawStr(100,0, "℃");
+  // u8g2.setCursor(21,45);
+  // u8g2.drawStr(42,45, "%");
+//  u8g2.sendBuffer();
 }
 
 void draw_CPU(void)
 {
   u8g2_prepare();
-  u8g2.clearBuffer();
-  u8g2.drawXBMP(0, 0,cpulogow,cpulogoh, cpulogo);
-  u8g2.drawXBMP(58, 0,temlogow,temlogoh, temlogo);
-  u8g2.drawXBMP(110, 0,shelogow,shelogoh, shelogo);
-  u8g2.drawXBMP(58, 23,freqlogow,freqlogoh, freqlogo);
-  u8g2.drawXBMP(0, 43,uselogow,uselogoh, uselogo);
-  u8g2.drawXBMP(58, 43,fan1logow,fan11ogoh, fan1logo);  
-  u8g2.setFont(u8g2_font_ncenB14_tr);
-  u8g2.setCursor(85, 0);
-  u8g2.print(CPU_TEMP); 
-//  u8g2.setFont(u8g2_font_unifont_t_symbols);
-//  u8g2.setFontPosTop();
-//  u8g2.drawUTF8(100, 0, "℃");
-  u8g2.setCursor(75, 22);
-  u8g2.print(CPU_FREQ);
-  u8g2.setCursor(21,45);
-  u8g2.drawStr(42,45, "%");
-  u8g2.print(CPU_USE);
-  u8g2.setCursor(75, 44);
+//  u8g2.clearBuffer();
+  u8g2.setFont(u8g2_font_freedoomr10_mu);
+  u8g2.setCursor(78, 0);
+  u8g2.print("CPU"); 
+  u8g2.setCursor(66, 16);
+  u8g2.print("TEM:");
+  u8g2.print(CPU_TEMP);
+  u8g2.print("C");
+  u8g2.setCursor(66, 28);
+  u8g2.print("FAN:");
   u8g2.print(CPU_FAN);
+  u8g2.setCursor(66, 40);
+  u8g2.print("FRE:");
+  u8g2.print(CPU_FREQ);
+  u8g2.setCursor(66, 52);
+  u8g2.print("USE:");
+  u8g2.print(CPU_USE);
+  u8g2.print("%");
+//  u8g2.drawLine(64, 0, 64, 64); 
+  // u8g2.drawStr(100,0, "℃");
+  // u8g2.setCursor(21,45);
+  // u8g2.drawStr(42,45, "%");
+  u8g2.sendBuffer();
+}
+
+void u8g2_init()
+{
+  u8g2.begin();
+  u8g2_prepare();
+  // u8g2.drawXBMP(32, 0, 64,64, manlogo);//Fallout点赞
+  u8g2.drawStr(0,0,"WIFI CONNECTED:");
+  u8g2.drawStr(0,20,"ASUS");
+  u8g2.drawStr(0,35,"IP ADDRESS:");
+  u8g2.setCursor(0,50);
+  u8g2.print(WiFi.localIP());
   u8g2.sendBuffer();
 }
