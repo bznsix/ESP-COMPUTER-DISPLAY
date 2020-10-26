@@ -7,6 +7,7 @@
 #include <ESP8266HTTPClient.h>
 #include <ArduinoJson.h>
 #include <DNSServer.h>
+#include <ESP8266HTTPUpdateServer.h>
 #include <ESP8266WebServer.h>
 #include <WiFiManager.h> 
 #include "WeatherStationImages.h"
@@ -29,8 +30,10 @@ IPAddress timeServer(139,199,215,251);                         /* 阿里云ntp�
 const int timeZone = 8;                                            /* 修改北京时区 */
 WiFiUDP   Udp;
 unsigned int  localPort = 8266;
-
-U8G2_SSD1306_128X64_NONAME_F_SW_I2C u8g2(U8G2_R0, /* clock=*/ D4, /* data=*/ D3, /* reset=*/ U8X8_PIN_NONE);   // All Boards without Reset of the Display
+//需要打开WEB_OTA
+#define WEB_OTA
+// #define ESP8266_01
+U8G2_SSD1306_128X64_NONAME_F_SW_I2C u8g2(U8G2_R2, /* clock=*/ 0, /* data=*/ 2, /* reset=*/ U8X8_PIN_NONE);   // All Boards without Reset of the Display
 //U8G2 初始化头文件//
 // wifi 参数
 const char* ssid = "ASUS";
@@ -57,7 +60,10 @@ int flow_flag;
 unsigned long last_time;
 unsigned long http_success_time;
 unsigned long http_fail_time;
-
+#ifdef WEB_OTA
+ESP8266WebServer webServer(80);
+ESP8266HTTPUpdateServer httpUpdater;
+#endif
 void setup() {
 // 启动串口
   Serial.begin(115200);
@@ -75,6 +81,15 @@ void setup() {
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());//打印出开发板的IP地址
   Udp.begin(localPort);
+  #ifdef ESP8266_01
+  pinMode(1, FUNCTION_3); 
+  //GPIO 3 (RX) swap the pin to a GPIO.
+  pinMode(3, FUNCTION_3);
+  #endif 
+  #ifdef WEB_OTA
+  httpUpdater.setup(&webServer); //httpUpdater绑定到webServer上
+  webServer.begin(); //启用WebServer
+  #endif
 }
 
 void loop() {
@@ -83,10 +98,13 @@ void loop() {
   {
     get_time();
     draw_TIME();
+    #ifdef WEB_OTA
+    webServer.handleClient(); //处理http事务
+    #endif
   }else{
     if(MODEL == 0)
       draw_GPU();
-    else if(MODEL ==1)
+    else if(MODEL == 1)
       draw_CPU();
     else{
       if(flow_flag == 0){
@@ -167,13 +185,14 @@ void getPrice(String s) {
 
   char model[] = "SET";
   datStart = s.indexOf(model) + strlen(model);
-  datEnd = s.indexOf("!", datStart);
-  datstr = s.substring(datStart, datEnd-1);
+  datEnd = s.indexOf("&", datStart);
+  datstr = s.substring(datStart, datEnd);
   MODEL = datstr.toInt();
 
-  datStart = s.indexOf(model) + strlen(model);
+  char set_time[] = "&";
+  datStart = s.indexOf(set_time) + strlen(set_time);
   datEnd = s.indexOf("!", datStart);
-  datstr = s.substring(datStart+1, datEnd);
+  datstr = s.substring(datStart, datEnd);
   SWITCH_TIME = datstr.toInt();
 
   Serial.println(MODEL);
